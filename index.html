@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Tree View</title>
+	 <link rel="stylesheet" href="css/uikit/uikit.min.css" />
+	 <link type="text/css" href="css/slickgrid/grid.css" rel="stylesheet" />
+	 <script type="text/javascript" src="js/jquery/jquery.js"></script>
+	 <script type="text/javascript" src="js/jquery/jquery-ui-1.11.3.custom.min.js"></script>
+     <script type="text/javascript" src="js/jquery/jquery.event.drag-2.2-min.js"></script>
+     <script type="text/javascript" src="js/uikit/uikit.min.js"></script>
+     <script type="text/javascript" src="js/slickgrid/slick.core.js"></script>
+     <script type="text/javascript" src="js/slickgrid/slick.grid.js"></script>
+     <script type="text/javascript" src="js/slickgrid/slick.dataview.js"></script>
+     <script type="text/javascript" src="js/slickgrid/slick.editors.js"></script>
+
+     <style type="text/css">
+     	 .cell-title {
+      		font-weight: bold;
+   		 }
+
+	    .cell-effort-driven {
+	      text-align: center;
+	    }
+
+	    .toggle {
+	      height: 16px;
+	      width: 16px;
+	      display: inline-block;
+	    }
+
+	    .toggle.expand {
+	      background: url(img/plus-square-o.png) no-repeat center center;
+	    }
+
+	    .toggle.collapse {
+	      background: url(img/minus-square-o.png) no-repeat center center;
+	    }
+
+	     
+      </style>
+     <script type="text/javascript">
+     	var toggleFormatter = function (row, cell, value, columnDef, dataContext) {
+     		value = value.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+     		var item = dataView.getItem(row);
+     		if (item.selected === "checked") {
+     			value = " <span><i class='checkbox uk-icon-check-square' aria-hidden='true'></i></span>&nbsp;" + value;
+     		} else if (item.selected === "unchecked") {
+     			value = " <span><i class='checkbox uk-icon-square-o' aria-hidden='true'></i></span>&nbsp;" + value;
+     		} else {
+     			value = " <span><i class='checkbox uk-icon-square' aria-hidden='true'></i></span>&nbsp;" + value;
+     		}
+			
+			var spacer = "<span style='display:inline-block;height:1px;width:" + (15 * dataContext["indent"]) + "px'></span>";
+			var idx = dataView.getIdxById(dataContext.id);
+			if (data[idx + 1] && data[idx + 1].indent > data[idx].indent) {
+				if (dataContext._collapsed) {
+					return spacer + " <span class='toggle expand'></span>&nbsp;" + value;
+				} else {
+					return spacer + " <span class='toggle collapse'></span>&nbsp;"  + value;
+				}
+			} else {
+				return spacer + " <span class='toggle'></span>&nbsp;" +  value;
+			}
+
+			columnDef.width = 5;
+		};
+
+		
+
+		var dataView;
+		var grid;
+		var data = [];
+		var columns = [
+			{id: "title", name: "", field: "title", formatter: toggleFormatter}		  
+		];
+
+		var options = { 
+		    enableCellNavigation: true, 
+		    forceFitColumns: true
+		};
+
+		 
+
+		function myFilter(item) {
+		  
+		  if (item.parent != null) {
+		    var parent = dataView.getItemById(item.parent.id)//data[item.parent.id];
+		       
+		    while (parent) {
+		      if (parent._collapsed) {
+		        return false;
+		      }
+		        parent = parent.parent ? dataView.getItemById(parent.parent.id) : null;//data[parent.parent ? parent.parent.id : null];
+		         
+		    }
+		  }
+
+		  return true;
+		}
+
+
+
+		$(function () {
+		  var indent = 0;
+		  data = [{id:1, selected: 'unchecked', title: '1-800-Flowers',  indent: 0, parent: null},
+		  {id:2, selected: 'unchecked', title: 'Agoura Hills',  indent: 1, parent:{id: 1}},
+		  {id:3, selected: 'unchecked', title: 'CA',  indent: 2, parent:{id: 2}},
+		  {id:4, selected: 'unchecked', title: 'United States',   indent: 3, parent:{id: 3}},
+		  {id:5, selected: 'unchecked', title: 'Alameda',  indent:  1, parent:{id: 1}},
+		  {id:6, selected: 'unchecked', title: 'CA',  indent: 2, parent: {id: 5} },
+		  {id:7, selected: 'unchecked', title: 'United States',  indent: 3, parent:{id: 6}}
+		  //{id:8, selected: 'unchecked', title: 'Mexico',  indent: 3, parent:{id: 3}}
+		  ]
+		    		    
+		  // initialize the model
+		  dataView = new Slick.Data.DataView();
+		  dataView.beginUpdate(); 
+		  dataView.setItems(data); 
+		  dataView.setFilter(myFilter);
+		  dataView.endUpdate();
+
+		  function getChildren(item) {
+		  	var allChildren = [];
+		  	var immediateChildren = getImmediateChildren(item);
+		  	for (let child of immediateChildren) {
+		  		allChildren.push(child);
+		  		var items = getChildren(child);
+		  		allChildren.push(...items);
+		  	}
+		  	return allChildren;
+		  }
+
+		  function getImmediateChildren(item) {
+		  	var allItems = dataView.getItems();
+		  	var lastIndex = allItems.length - 1;
+		  	var itemIndex = dataView.getIdxById(item.id);
+		  	var children = [];
+		  	for(var i = itemIndex + 1; i <= lastIndex; i++) {
+		  		var child = dataView.getItemByIdx(i);
+		  		var parent = dataView.getItemById(child.parent.id);
+		  		if (parent.id === item.id) {
+		  			children.push(child);
+		  		}
+		  	}
+		  	return children;
+
+		  }
+		  
+
+		  function getParent(item) {
+		  	if (item.parent === null) {
+		  		return null;	
+		  	} 
+		  	return dataView.getItemById(item.parent.id);;
+		  }
+
+		  function getNextSibling(item) {
+		  	var parent = getParent(item);
+		  	var siblings = getImmediateChildren(parent);
+		  	var itemIndex = siblings.indexOf(item);
+		  	if (itemIndex === siblings.length - 1) {
+		  		return null;
+		  	} else {
+		  		return siblings[itemIndex + 1];
+		  	}
+		  }
+
+
+		  // initialize the grid
+		  grid = new Slick.Grid("#myGrid", dataView, columns, options);
+
+		  grid.onCellChange.subscribe(function (e, args) {
+		    dataView.updateItem(args.item.id, args.item);
+		  });  
+
+
+
+		  
+
+		  function checkItem(item) {
+		  	item.selected = "checked";
+    		dataView.updateItem(item.id, item);
+	    	var children = getChildren(item);
+	    	for (let child of children) {
+	    		child.selected = "checked";
+	    		dataView.updateItem(child.id, child);
+	    	}
+
+	    	updateParent(item, "checked");
+		  }
+
+		  function uncheckItem(item) {
+		  	item.selected = "unchecked";
+    		dataView.updateItem(item.id, item);
+	    	var children = getChildren(item);
+	    	for (let child of children) {
+	    		child.selected = "unchecked";
+	    		dataView.updateItem(child.id, child);
+	    	}
+
+	    	updateParent(item, "unchecked")
+		  }
+
+		  function checkIfAllImmediateChildrenMatchesThisState(id, state) {
+		  	var immediateChildren = getImmediateChildren(dataView.getItemById(id));
+		  	var all = true;
+		  	for (let child of immediateChildren) {
+	  			if (child.selected === state) {
+	  				all = true;
+	  			} else {
+	  				all = false;
+	  				break;
+	  			}
+	  		}
+	  		return all;
+		  }
+
+		  function setSelectedState(item, state) {
+		  	item.selected = state;
+		  	dataView.updateItem(item.id, item);
+		  	updateParent(item, state);
+		  }
+
+		  function updateParent(item, childChangedState) {
+		  	var parent = getParent(item);
+		  	if (parent == null) {
+		  		return;
+		  	}
+		  	var currentState = parent.selected;
+		  	if (childChangedState === "checked") {
+		  		
+		  		var allChecked = checkIfAllImmediateChildrenMatchesThisState(parent.id, "checked");
+
+		  		if (allChecked) {
+		  			setSelectedState(parent, "checked");
+		  		} else {
+		  			if (currentState !== "indeterminate") {
+			  			setSelectedState(parent, "indeterminate");	
+		  			}
+		  		}
+		  	} else if (childChangedState === "unchecked") {
+	  			var allUnchecked = checkIfAllImmediateChildrenMatchesThisState(parent.id, "unchecked");
+
+	  			if (allUnchecked) {
+	  				setSelectedState(parent, "unchecked");
+	  			} else {
+	  				if (currentState !== "indeterminate") {
+		  				setSelectedState(parent, "indeterminate");
+	  				}
+	  			}
+		  	} else {
+		  		setSelectedState(parent, "indeterminate");	
+		  	}
+
+		}
+		  
+		grid.onClick.subscribe(function (e, args) {
+		  	var item = dataView.getItem(args.row);
+		    if ($(e.target).hasClass("toggle")) {
+		      if (item) {
+		        if (!item._collapsed) {
+		          item._collapsed = true;
+		        } else {
+		          item._collapsed = false;
+		        }
+
+		        dataView.updateItem(item.id, item);
+		      }
+		      e.stopImmediatePropagation();
+		    } else if ($(e.target).hasClass('checkbox')) {
+		    	dataView.beginUpdate(); 
+		    	
+		    	if (item.selected === "unchecked") {
+		    		checkItem(item);
+		    	} else {
+		    		uncheckItem(item);
+		    	}
+		    	dataView.endUpdate();
+		    	
+		    }
+
+		  });
+
+		var contextMenuOptions = {
+			"collapseAll" : 0,
+			"expandAll": 1,
+			"addChildItem": 2,
+			"deleteItem": 3
+		};
+
+		grid.onContextMenu.subscribe(function(e) {
+			console.log(e);
+			e.preventDefault();
+			var cell = grid.getCellFromEvent(e);
+			var contextMenu = $('#contextMenu');
+			var menuItems = contextMenu.children().children();
+
+			if ($(e.target).hasClass('toggle')) {
+				$(menuItems[contextMenuOptions.addChildItem]).hide();
+				$(menuItems[contextMenuOptions.deleteItem]).hide();
+
+				if ($(e.target).hasClass('toggle collapse')) {
+					$(menuItems[contextMenuOptions.expandAll]).hide();
+					$(menuItems[contextMenuOptions.collapseAll]).show();
+
+				} else if ($(e.target).hasClass('toggle expand')) {
+					$(menuItems[contextMenuOptions.expandAll]).show();
+					$(menuItems[contextMenuOptions.collapseAll]).hide();
+				}
+			} else {
+			 	$(menuItems[contextMenuOptions.expandAll]).hide();
+				$(menuItems[contextMenuOptions.collapseAll]).hide();	
+				$(menuItems[contextMenuOptions.addChildItem]).show();
+				$(menuItems[contextMenuOptions.deleteItem]).show();
+			}
+
+			contextMenu
+                    .data("row", cell.row)
+                    .css("top", e.pageY)
+                    .css("left", e.pageX)
+                    .show();
+            $("body").on("click", function () {
+                    $('#contextMenu').hide();
+                });
+		})
+
+		function doActionForSubtree(item, isCollapsed) {
+			item._collapsed = isCollapsed;
+        	dataView.updateItem(item.id, item);
+        	var children = getChildren(item);
+        	for (let child of children) {
+        		child._collapsed = isCollapsed;
+        		dataView.updateItem(child.id, child);
+        	}
+		}
+
+		$('#contextMenu').click(function(e) {
+			if (!$(e.target).data('action')){
+            	return;
+	        }
+            
+	        if ($(e.target).data('action') === 'collapseAll'){
+	        	var row = $(this).data("row");
+	        	var item = dataView.getItem(row);
+	        	doActionForSubtree(item, true);
+	        }
+	        if ($(e.target).data('action') === 'expandAll'){
+	            var row = $(this).data("row");
+	        	var item = dataView.getItem(row);
+	        	doActionForSubtree(item, false);
+	        }
+	        if ($(e.target).data('action') === 'deleteItem') {
+	        	var row = $(this).data("row");
+	        	var item = dataView.getItem(row);
+	        	var parent = getParent(item);
+	        	var children = getChildren(item);
+	        	dataView.beginUpdate(); 
+	        	uncheckItem(item);
+	        	for (let child of children) {
+	        		dataView.deleteItem(child.id);
+	        	}
+	        	dataView.deleteItem(item.id);
+	        	dataView.endUpdate();
+	        }
+
+	        if ($(e.target).data('action') === 'addChildItem') {
+	        	var row = $(this).data("row");
+	        	var item = dataView.getItem(row);
+	        	var randomNumber = Math.floor(Math.random() * 20);
+	        	var data = {
+	        		id:randomNumber, selected: 'unchecked', title: 'Bologna',  indent: item.indent + 1, parent:{id: item.id}};
+	        	var nextRow = row + 1;
+	        	var itemAtNextRow = dataView.getItem(nextRow);
+	        	if (itemAtNextRow == null ) {
+	        		dataView.addItem(data);
+	        		dataView.updateItem(item.id, item);
+	        	} else {
+	        		dataView.insertItem(dataView.getIdxById(itemAtNextRow.id), data);
+	        		dataView.updateItem(item.id, item);
+	        		dataView.updateItem(itemAtNextRow.id, itemAtNextRow);
+	        	}
+	        	uncheckItem(data);
+
+	        }
+
+		});
+
+		  // wire up model events to drive the grid
+		  dataView.onRowCountChanged.subscribe(function (e, args) {
+		    grid.updateRowCount();
+		    grid.render();
+		  });
+
+		  dataView.onRowsChanged.subscribe(function (e, args) {
+		    grid.invalidateRows(args.rows);
+		    grid.render();
+		  });
+		}) 
+     </script>
+</head>
+<body>
+	<div id="myGrid" style="width:600px;height:500px;"></div>
+	<div id="contextMenu" class="uk-dropdown uk-dropdown-small">
+		<ul class="uk-nav uk-nav-dropdown">
+            <li><a id="collapseAll" data-action="collapseAll">Collapse All</a></li>
+            <li><a id="expandAll" data-action="expandAll">Expand All</a></li>
+            <li><a id="addChildItem" data-action="addChildItem">Add Child</a></li>
+            <li><a id="deleteItem" data-action="deleteItem">Delete Item</a></li>
+        </ul>
+	</div>
+</body>
+</html>
